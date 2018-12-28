@@ -28,23 +28,34 @@ var (
 )
 
 func main() {
+	log.Printf("Trying \"%s\"...", mnemonic)
+	if addr, err := validate(mnemonic); err == nil {
+		log.Printf("Find valid address %s with \"%s\"...", addr, mnemonic)
+	}
+}
+
+func validate(mnemonic string) (string, error) {
 	xprv, err := importKeyFromMnemonic(mnemonic)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	path := genPath(1, 1)
 	address, err := genAddress(xprv.Derive(path).XPub())
 	if err != nil {
-		log.Println(err)
+		return "", err
 	}
 
 	balance, err := getBalance(address)
 	if err != nil {
-		log.Println(err)
+		return "", err
 	}
 
-	log.Println(address, balance)
+	if balance <= 0 {
+		return "", errors.New("poor guy")
+	}
+
+	return address, nil
 }
 
 func importKeyFromMnemonic(mnemonic string) (*chainkd.XPrv, error) {
