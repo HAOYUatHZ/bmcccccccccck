@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 	mnem "github.com/bytom/wallet/mnemonic"
+	"github.com/bytom/wallet/mnemonic/wordlists"
 )
 
 const EntropyLength = 128
@@ -23,15 +24,25 @@ var (
 	ErrMnemonicLength = errors.New("mnemonic length error")
 
 	netParams = &consensus.MainNetParams
-
-	mnemonic = "about about about about about about about about about about about about"
 )
 
 func main() {
-	log.Printf("Trying \"%s\"...", mnemonic)
+	indexes := [12]uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+REDO:
+	indexes = incr(indexes)
+	words := make([]string, 12)
+	for i := 0; i < 12; i++ {
+		words[i] = wordlists.English[indexes[i]]
+
+	}
+	mnemonic := strings.Join(words, " ")
+	log.Printf("Trying %v \"%s\"...", indexes, mnemonic)
 	if addr, err := validate(mnemonic); err == nil {
 		log.Printf("Find valid address %s with \"%s\"...", addr, mnemonic)
 	}
+
+	goto REDO
 }
 
 func validate(mnemonic string) (string, error) {
@@ -145,4 +156,24 @@ func httpGet(url string, result interface{}) error {
 	}
 
 	return json.Unmarshal(body, result)
+}
+
+func incr(indexes [12]uint64) [12]uint64 {
+	indexes[11]++
+
+	for i := 11; i >= 0; i-- {
+		// log.Println(indexes)
+		if (indexes[i] >= 2048) && (i-1) >= 0 {
+			indexes[i-1]++
+			for j := i; j <= 11; j++ {
+				indexes[j] = 0
+			}
+		}
+	}
+
+	if indexes[0] >= 2048 {
+		log.Fatal("Done")
+	}
+
+	return indexes
 }
