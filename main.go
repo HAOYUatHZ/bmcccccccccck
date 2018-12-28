@@ -32,8 +32,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("root XPub:", xprv.XPub())
+	path := genPath(1, 1)
+	address, err := genAddress(xprv.Derive(path).XPub())
+	if err != nil {
+		log.Println(err)
+	}
 
+	log.Println(address)
 }
 
 func importKeyFromMnemonic(mnemonic string) (*chainkd.XPrv, error) {
@@ -62,9 +67,7 @@ func createKeyFromMnemonic(mnemonic string) (*chainkd.XPrv, error) {
 	return &xprv, nil
 }
 
-func genAddress(xPub chainkd.XPub, accountIdx uint64, addressIdx uint64) (string, error) {
-	path := pathForAddress(accountIdx, addressIdx)
-	derivedXPub := xPub.Derive(path)
+func genAddress(derivedXPub chainkd.XPub) (string, error) {
 	derivedPK := derivedXPub.PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
 
@@ -76,7 +79,7 @@ func genAddress(xPub chainkd.XPub, accountIdx uint64, addressIdx uint64) (string
 	return address.EncodeAddress(), nil
 }
 
-func pathForAddress(accountIdx, addressIndex uint64) [][]byte {
+func genPath(accountIdx, addressIndex uint64) [][]byte {
 	/*
 	   path is follow by bip44 https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
 	   path[0] and path[1] is bip44 hard code rule
