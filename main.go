@@ -2,18 +2,19 @@ package main
 
 import (
 	"bytes"
-	// "encoding/hex"
 	"encoding/binary"
-	// "encoding/json"
+	"encoding/json"
+	"io/ioutil"
 	"log"
-	// "os"
+	"net/http"
+	"strings"
+
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 	mnem "github.com/bytom/wallet/mnemonic"
-	"strings"
 )
 
 const EntropyLength = 128
@@ -38,7 +39,12 @@ func main() {
 		log.Println(err)
 	}
 
-	log.Println(address)
+	balance, err := getBalance(address)
+	if err != nil {
+		log.Println(err)
+	}
+
+	log.Println(address, balance)
 }
 
 func importKeyFromMnemonic(mnemonic string) (*chainkd.XPrv, error) {
@@ -97,4 +103,35 @@ func genPath(accountIdx, addressIndex uint64) [][]byte {
 	binary.LittleEndian.PutUint32(path[2], uint32(accountIdx))
 	binary.LittleEndian.PutUint32(path[4], uint32(addressIndex))
 	return path
+}
+
+type addressDetail struct {
+	Balance uint64 `json:"balance"`
+}
+
+func getBalance(address string) (uint64, error) {
+	url := "https://blockmeta.com/api/v2/address/" + address
+	var resp addressDetail
+	if err := httpGet(url, &resp); err != nil {
+		return 0, err
+	}
+
+	return resp.Balance, nil
+}
+
+func httpGet(url string, result interface{}) error {
+	client := &http.Client{}
+	resp, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(body, result)
 }
